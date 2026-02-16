@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from src.schema import SolicitudProducto
 from pydantic import ValidationError
@@ -11,11 +12,11 @@ os.makedirs("data/reports", exist_ok=True)
 os.makedirs("data/rejected", exist_ok=True)
 os.makedirs("data/processed", exist_ok=True)
 
-# Configuración básica de logs
+# Configuración de logs con formato más limpio y profesional
 logging.basicConfig(
     filename='data/reports/pipeline.log', 
     level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s | %(levelname)s | %(message)s'
 )
 
 class Pipeline:
@@ -39,19 +40,25 @@ class Pipeline:
             elif ext == '.txt':
                 return pd.read_csv(self.input_file, sep='|').to_dict(orient='records')
             else:
-                logging.warning(f"Formato no soportado saltado: {ext}")
+                logging.warning(f"⚠️ Formato no soportado saltado: {ext}")
                 return []
         except Exception as e:
-            logging.error(f"Error crítico leyendo archivo {self.input_file}: {e}")
+            logging.error(f"❌ Error crítico leyendo archivo {self.input_file}: {e}")
             return []
 
     def run(self):
-        logging.info(f"--- Iniciando procesamiento de {os.path.basename(self.input_file)} ---")
+        # INICIO DEL CRONÓMETRO
+        start_time = time.time()
+        archivo_nombre = os.path.basename(self.input_file)
         
+        logging.info(f"▶️ [PASO 1: INGESTA] Iniciando lectura de: {archivo_nombre}")
         raw_data = self._read_data()
+        
         if not raw_data:
+            logging.warning(f"⚠️ [PASO 1: INGESTA] Archivo vacío o ilegible. Abortando.")
             return
 
+        logging.info(f"🔄 [PASO 2: VALIDACIÓN] Evaluando {len(raw_data)} registros contra Pydantic Schema...")
         for record in raw_data:
             try:
                 obj = SolicitudProducto(**record)
@@ -64,15 +71,25 @@ class Pipeline:
                 record['error_details'] = [{'loc': ['general'], 'msg': str(e), 'type': 'fatal'}]
                 self.invalid_records.append(record)
 
-        self._save_results()
+        logging.info(f"✅ [PASO 2: VALIDACIÓN] Completada. Válidos: {len(self.valid_records)} | Inválidos: {len(self.invalid_records)}")
+        
+        logging.info(f"💾 [PASO 3: PERSISTENCIA] Guardando resultados y generando reportes...")
+        
+        # CÁLCULO DEL TIEMPO TOTAL
+        elapsed_time = round(time.time() - start_time, 4)
+        
+        # Pasamos el tiempo calculado a la función que guarda los resultados
+        self._save_results(elapsed_time)
+        
+        logging.info(f"🏁 [FIN] Pipeline finalizado exitosamente en {elapsed_time} segundos.")
+        logging.info("-" * 60) # Separador visual en el log
 
-    def _generate_quality_report(self, source_name, timestamp):
+    def _generate_quality_report(self, source_name, timestamp, elapsed_time):
         """Genera el reporte analítico de calidad solicitado por el negocio"""
         total_procesados = len(self.valid_records) + len(self.invalid_records)
         total_validos = len(self.valid_records)
         total_invalidos = len(self.invalid_records)
 
-        # Contamos cuántos errores individuales hubo en total para calcular la composición
         total_errores_individuales = 0
         for record in self.invalid_records:
             total_errores_individuales += len(record.get('error_details', []))
@@ -80,6 +97,7 @@ class Pipeline:
         report = {
             "archivo_origen": source_name,
             "fecha_ejecucion": timestamp,
+            "tiempo_procesamiento_segundos": elapsed_time, # <--- NUEVO DATO
             "totales": {
                 "procesados": total_procesados,
                 "validos": total_validos,
@@ -110,7 +128,6 @@ class Pipeline:
                     
                     reglas_rotas[clave_regla]["cantidad_fallos"] += 1
                     
-                    # Guardamos TODOS los ejemplos, sin límite
                     ejemplo = {
                         "id_solicitud": record.get("id_solicitud", "N/A"),
                         "valor_recibido": record.get(campo, "N/A")
@@ -118,11 +135,9 @@ class Pipeline:
                     reglas_rotas[clave_regla]["ejemplos_valores_rechazados"].append(ejemplo)
 
             for regla, datos in reglas_rotas.items():
-                # 1. ¿Cuánto contribuye esta regla al total de errores? (Composición del 15%)
                 distribucion = (datos["cantidad_fallos"] / total_errores_individuales) * 100
                 datos["composicion_del_error_total"] = f"{round(distribucion, 2)}%"
 
-                # 2. ¿Cuál es la tasa de cumplimiento específica de esta regla sobre el total de registros?
                 tasa_fallo_regla = (datos["cantidad_fallos"] / total_procesados) * 100
                 datos["tasa_cumplimiento_regla"] = f"{round(100 - tasa_fallo_regla, 2)}%"
                 
@@ -131,24 +146,21 @@ class Pipeline:
         report_path = f"data/reports/reporte_calidad_{source_name}_{timestamp}.json"
         with open(report_path, 'w') as f:
             json.dump(report, f, indent=4, ensure_ascii=False)
-        logging.info(f"Reporte de calidad JSON generado: {report_path}")
+        logging.info(f"📄 Reporte de calidad JSON generado en: {report_path}")
 
-    def _save_results(self):
+    def _save_results(self, elapsed_time):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         source_name = os.path.basename(self.input_file).split('.')[0]
 
-        # 1. Guardar Válidos (CSV)
         if self.valid_records:
             df_valid = pd.DataFrame(self.valid_records)
             df_valid.to_csv(f"data/processed/validos_{source_name}_{timestamp}.csv", index=False)
-            logging.info(f"Guardados {len(df_valid)} registros válidos en CSV.")
 
-        # 2. Guardar Raw Inválidos
         if self.invalid_records:
             df_invalid = pd.DataFrame(self.invalid_records)
             df_invalid.to_json(f"data/rejected/raw_rechazados_{source_name}_{timestamp}.json", orient='records', indent=2)
 
-        # 3. Reporte de Calidad
-        self._generate_quality_report(source_name, timestamp)
+        # Pasamos el elapsed_time al reporte
+        self._generate_quality_report(source_name, timestamp, elapsed_time)
         
-        print(f"[{source_name}] Procesados: {len(self.valid_records)+len(self.invalid_records)} | Válidos: {len(self.valid_records)} | Rechazados: {len(self.invalid_records)}")
+        print(f"[{source_name}] Procesados: {len(self.valid_records)+len(self.invalid_records)} | Válidos: {len(self.valid_records)} | Rechazados: {len(self.invalid_records)} | Tiempo: {elapsed_time}s")
