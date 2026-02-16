@@ -78,6 +78,9 @@ def test_email_invalido():
     
     with pytest.raises(ValidationError) as excinfo:
         SolicitudProducto(**payload)
+        
+    errores = excinfo.value.errors()
+    assert any(e['loc'] == ('email_contacto',) for e in errores)
 
 # 5. Test de Regla de Formato: Fecha Inválida
 def test_fecha_invalida():
