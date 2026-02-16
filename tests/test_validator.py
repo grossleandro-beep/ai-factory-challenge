@@ -25,6 +25,9 @@ def test_solicitud_valida():
     assert solicitud.fecha_solicitud == date(2026, 2, 13)
     assert solicitud.moneda == "ARS"
 
+    # Como el cliente es VIP (True), debería clasificarlo como ALTO_VALOR
+    assert solicitud.segmento_riesgo == "ALTO_VALOR"
+
 # 2. Test de Regla de Negocio: Monto Negativo
 def test_monto_negativo_falla():
     payload = {

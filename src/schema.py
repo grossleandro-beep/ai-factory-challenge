@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
-from typing import Literal
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict, model_validator
+from typing import Literal, Optional
 from datetime import date
 
 class SolicitudProducto(BaseModel):
@@ -21,8 +21,21 @@ class SolicitudProducto(BaseModel):
     es_cliente_vip: bool
     canal_digital: bool
 
+    # Campo que almacenará nuestra transformación calculada
+    segmento_riesgo: Optional[str] = None
+
     # Validadores personalizados si necesitamos lógica compleja
     @field_validator('tipo_producto')
     @classmethod
     def normalizar_producto(cls, v):
         return v.upper() # Regla: Normalización
+    
+    # Transformación
+    @model_validator(mode='after')
+    def clasificar_riesgo(self):
+        # Clasificamos la solicitud por tipo (Requisito del Challenge)
+        if self.monto_o_limite > 20000 or self.es_cliente_vip:
+            self.segmento_riesgo = "ALTO_VALOR"
+        else:
+            self.segmento_riesgo = "ESTANDAR"
+        return self
