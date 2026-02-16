@@ -26,6 +26,7 @@ Se ha diseñado una arquitectura **Batch ETL** desacoplada basada en el patrón 
 3.  **Segregación:** Enrutamiento automático:
     * Datos limpios --> `data/processed` (Normalizados).
     * Datos sucios --> `data/rejected` (Con reporte de error detallado en JSON).
+    * Datos de reportes y logs --> `data/reports` (reportes de ejecución detallado en formato JSON)
 
 ### 3.2 Stack Tecnológico
 * **Python 3.10+**: Lenguaje estándar.
