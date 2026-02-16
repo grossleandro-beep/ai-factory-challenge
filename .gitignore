@@ -1,0 +1,18 @@
+# Python environment
+.venv/
+__pycache__/
+*.py[cod]
+
+# Data & Logs (No subir datos reales ni logs de ejecución)
+data/raw/*
+data/processed/*.csv
+data/rejected/*
+data/reports/*
+*.log
+*.db
+data/*.db
+
+# IDE settings
+.vscode/
+.DS_Store
+.pytest_cache/
