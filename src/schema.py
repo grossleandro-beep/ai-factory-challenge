@@ -12,7 +12,12 @@ class SolicitudProducto(BaseModel):
     pais: str = Field(min_length=2, max_length=2)
     email_contacto: EmailStr # Regla: Formato email válido
 
+    # NUEVOS FLAGS
+    es_cliente_vip: bool
+    canal_digital: bool
+
     # Validadores personalizados si necesitamos lógica compleja
     @field_validator('tipo_producto')
+    @classmethod
     def normalizar_producto(cls, v):
         return v.upper().strip() # Regla: Normalización

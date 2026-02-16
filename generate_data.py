@@ -31,7 +31,11 @@ def generar_datos_multi_formato():
                 "monto_o_limite": round(random.uniform(1000, 50000), 2),
                 "moneda": random.choice(monedas),
                 "pais": random.choice(paises),
-                "email_contacto": fake.email()
+                "email_contacto": fake.email(),
+
+                # NUEVOS FLAGS AGREGADOS (Requisito del Challenge)
+                "es_cliente_vip": random.choice([True, False]),
+                "canal_digital": random.choice([True, False])
             }
 
             if not es_valido:

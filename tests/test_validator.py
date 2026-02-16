@@ -13,7 +13,9 @@ def test_solicitud_valida():
         "monto_o_limite": 5000.50,
         "moneda": "ARS",
         "pais": "AR",
-        "email_contacto": "test@example.com"
+        "email_contacto": "test@example.com",
+        "es_cliente_vip": True,   
+        "canal_digital": True     
     }
     
     solicitud = SolicitudProducto(**payload)
@@ -33,7 +35,9 @@ def test_monto_negativo_falla():
         "monto_o_limite": -10.0, # INVALIDO
         "moneda": "USD",
         "pais": "AR",
-        "email_contacto": "test@example.com"
+        "email_contacto": "test@example.com",
+        "es_cliente_vip": True,   
+        "canal_digital": True     
     }
     
     with pytest.raises(ValidationError) as excinfo:
@@ -53,7 +57,9 @@ def test_moneda_falla():
         "monto_o_limite": 10.0, 
         "moneda": "CLP", # INVALIDO
         "pais": "AR",
-        "email_contacto": "test@example.com"
+        "email_contacto": "test@example.com",
+        "es_cliente_vip": True,   
+        "canal_digital": True     
     }
     
     with pytest.raises(ValidationError) as excinfo:
@@ -73,7 +79,9 @@ def test_email_invalido():
         "monto_o_limite": 100.0, 
         "moneda": "USD",
         "pais": "AR",
-        "email_contacto": "email sin arroba.com" # INVALIDO
+        "email_contacto": "email sin arroba.com", # INVALIDO
+        "es_cliente_vip": True,   
+        "canal_digital": True     
     }
     
     with pytest.raises(ValidationError) as excinfo:
@@ -93,7 +101,9 @@ def test_fecha_invalida():
         "monto_o_limite": 100.0, 
         "moneda": "USD",
         "pais": "AR",
-        "email_contacto": "test@example.com"
+        "email_contacto": "test@example.com",
+        "es_cliente_vip": True,   
+        "canal_digital": True     
     }
     
     # 2. ACT & ASSERT: El guardia (Pydantic) DEBE explotar y detener esto.

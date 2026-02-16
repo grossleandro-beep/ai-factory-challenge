@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Autor** | Leandro Martín Gross Alarcón |
 | **Estado** | MVP |
-| **Fecha** | 2026-02-13 |
+| **Fecha** | 2026-02-15 |
 | **Alcance** | Back-Office Automation |
 
 ## 1. Resumen Ejecutivo
